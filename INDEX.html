@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NuméricaSolver - Resolução Passo a Passo de Cálculo Numérico</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Marked.js para renderizar Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Math.js para cálculos numéricos e derivadas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+
+    <!-- Configuração do MathJax para Notação Matemática TeX/LaTeX -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        /* Estilização para o conteúdo de resolução impresso ou exibido */
+        .prose table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+        .prose th, .prose td {
+            border: 1px solid #e2e8f0;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+        }
+        .prose th {
+            background-color: #f8fafc;
+            font-weight: 600;
+        }
+        .prose p {
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+        }
+        .prose h1, .prose h2, .prose h3 {
+            color: #1e293b;
+            font-weight: 700;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .prose h1 { font-size: 1.5rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+        .prose h2 { font-size: 1.25rem; color: #2563eb; }
+        .prose h3 { font-size: 1.1rem; }
+        .prose ul, .prose ol { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .prose li { margin-bottom: 0.25rem; }
+
+        .drop-zone--over {
+            border-color: #4f46e5 !important;
+            background-color: #eeeafe !important;
+        }
+
+        /* REGRAS DE IMPRESSÃO DA PÁGINA (PRINT / PDF) */
+        @media print {
+            header, footer, nav, .tab-btn, button, .preset-buttons, #prompt-form-container, #error-message, #loading-ia {
+                display: none !important;
+            }
+            body {
+                background: white !important;
+                color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            main {
+                max-width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .tab-content {
+                display: block !important;
+            }
+            #result-ia-container {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+            .prose h1 {
+                font-size: 1.6pt !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- CABEÇALHO -->
+    <header class="bg-indigo-700 text-white shadow-md">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                    <svg class="w-7 h-7 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">NuméricaSolver</h1>
+                    <p class="text-xs text-indigo-200">Resoluções Didáticas e Passo a Passo para Cálculo Numérico</p>
+                </div>
+            </div>
+            <span class="bg-indigo-800 text-indigo-100 text-xs px-3 py-1 rounded-full font-medium border border-indigo-600">
+                Resolução Acadêmica Rígida (Alta Precisão)
+            </span>
+        </div>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="max-w-6xl mx-auto px-4 py-6 flex-grow w-full">
+
+        <!-- NAVEGAÇÃO DE ABAS -->
+        <div class="flex flex-wrap border-b border-slate-200 mb-6 bg-white rounded-t-xl p-1 shadow-sm">
+            <button onclick="switchTab('tab-ia')" id="btn-tab-ia" class="tab-btn px-5 py-3 font-semibold text-sm rounded-lg transition-all text-indigo-600 bg-indigo-50 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Resolver Questão com IA (Passo a Passo)
+            </button>
+            <button onclick="switchTab('tab-base')" id="btn-tab-base" class="tab-btn px-5 py-3 font-medium text-sm text-slate-600 hover:text-slate-900 rounded-lg transition-all flex items-center gap-2">
+                Conversor de Bases
+            </button>
+            <button onclick="switchTab('tab-pf')" id="btn-tab-pf" class="tab-btn px-5 py-3 font-medium text-sm text-slate-600 hover:text-slate-900 rounded-lg transition-all flex items-center gap-2">
+                Ponto Flutuante F(β, t, e_min, e_max)
+            </button>
+            <button onclick="switchTab('tab-mil')" id="btn-tab-mil" class="tab-btn px-5 py-3 font-medium text-sm text-slate-600 hover:text-slate-900 rounded-lg transition-all flex items-center gap-2">
+                Ponto Fixo (MIL) & Teste de $\phi(x)$
+            </button>
+            <button onclick="switchTab('tab-newton')" id="btn-tab-newton" class="tab-btn px-5 py-3 font-medium text-sm text-slate-600 hover:text-slate-900 rounded-lg transition-all flex items-center gap-2">
+                Método de Newton-Raphson
+            </button>
+        </div>
+
+        <!-- MENSAGEM DE ERRO GLOBAL -->
+        <div id="error-message" class="hidden mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-md text-red-700 text-sm"></div>
+
+        <!-- ABA 1: SOLVER DE QUESTÕES COM IA -->
+        <div id="tab-ia" class="tab-content block space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="mb-4">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span>Gerador de Resolução Detalhada de Prova/Exercício</span>
+                    </h2>
+                    <p class="text-sm text-slate-600 mt-1">
+                        Cole o enunciado da questão ou envie uma imagem (foto do caderno/prova). A IA identificará a questão e gerará a resolução matemática completa passo a passo pronta para entrega.
+                    </p>
+                </div>
+
+                <!-- PRESETS / QUESTÕES DE EXEMPLO -->
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Exemplos Práticos de Provas:</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="loadPreset(1)" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-md font-medium transition-colors border border-indigo-200">
+                            1. Bissecção (Com Limites, Bolzano & Derivada)
+                        </button>
+                        <button onclick="loadPreset(2)" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-md font-medium transition-colors border border-indigo-200">
+                            2. Perda de Precisão em Quadráticas ($x_1 \cdot x_2 = c/a$)
+                        </button>
+                        <button onclick="loadPreset(3)" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-md font-medium transition-colors border border-indigo-200">
+                            3. Ponto Fixo (MIL) com Prova de Convergência $|\phi'|<1$
+                        </button>
+                        <button onclick="loadPreset(4)" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-md font-medium transition-colors border border-indigo-200">
+                            4. Newton-Raphson com Provas Acadêmicas
+                        </button>
+                        <button onclick="loadPreset(5)" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-md font-medium transition-colors border border-indigo-200">
+                            5. Ponto Flutuante $F(2,10,-15,15)$ & Discretização
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CONFIGURAÇÃO DE PADRONIZAÇÃO NUMÉRICA (TRUNCAMENTO OU ARREDONDAMENTO ATÉ 18 CASAS) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Política Numérica Globais:</label>
+                        <select id="ia-precision-mode" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white font-medium focus:ring-2 focus:ring-indigo-500">
+                            <option value="arredondamento" selected>Arredondamento Padrão (Toda a Questão)</option>
+                            <option value="truncamento">Truncamento Estrito / Corte Fixo (Toda a Questão)</option>
+                        </select>
+                        <p class="text-[11px] text-slate-500 mt-1">A regra escolhida será aplicada do início ao fim em todas as substituições intermediárias.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Precisão de Casas Decimais (1 a 18 dígitos):</label>
+                        <input type="number" id="ia-decimals" value="18" min="1" max="18" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white font-mono focus:ring-2 focus:ring-indigo-500">
+                        <p class="text-[11px] text-slate-500 mt-1">Define o limite exato de dígitos pós-vírgula (máximo de 18 casas decimais).</p>
+                    </div>
+                </div>
+
+                <!-- FORMULÁRIO DE ENTRADA DA QUESTÃO -->
+                <div id="prompt-form-container" class="space-y-4">
+                    <div id="drop-zone" class="p-3 border-2 border-dashed border-slate-300 rounded-lg transition-colors">
+                        <label for="prompt-input" class="block text-sm font-medium text-slate-700 mb-1 flex justify-between items-center">
+                            <span>Enunciado ou Texto da Questão:</span>
+                            <span class="text-xs text-indigo-600 font-normal">💡 Dica: Cole um <b>Print de Tela (Ctrl + V)</b> diretamente aqui</span>
+                        </label>
+                        <textarea id="prompt-input" rows="4" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm code-font" placeholder="Cole aqui o texto do exercício ou pressione Ctrl+V para colar um Print da tela..."></textarea>
+                    </div>
+
+                    <!-- UPLOAD DE IMAGEM DA QUESTÃO -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Anexar Imagem ou Print da Questão:</label>
+                        <div class="flex items-center gap-4">
+                            <label class="cursor-pointer bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm inline-flex items-center gap-2">
+                                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                Escolher Imagem / Print
+                                <input type="file" id="image-input" accept="image/*" class="hidden" onchange="previewImage(this)">
+                            </label>
+                            <span id="file-name-display" class="text-xs text-slate-500 italic">Nenhum print ou imagem selecionado</span>
+                            <button id="btn-remove-image" onclick="removeImage()" class="hidden text-xs text-red-600 hover:text-red-800 font-medium">Remover imagem</button>
+                        </div>
+                        <div id="image-preview-container" class="mt-2 hidden">
+                            <img id="image-preview" src="" alt="Preview da questão" class="max-h-48 rounded-lg border border-slate-200 shadow-sm">
+                        </div>
+                    </div>
+
+                    <!-- BOTÃO DE AÇÃO -->
+                    <div class="pt-2">
+                        <button id="btn-solve-ia" onclick="resolverQuestaoIA()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Gerar Resolução Completa (Todas as Contas)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARREGANDO -->
+            <div id="loading-ia" class="hidden bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center">
+                <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-indigo-600 border-t-transparent mb-3"></div>
+                <h3 class="font-semibold text-slate-800 text-base">Processando e Calculando com Alta Precisão...</h3>
+                <p class="text-xs text-slate-500 mt-1">Executando substituições numéricas detalhadas e formatando notação matemática LaTeX.</p>
+            </div>
+
+            <!-- RESULTADO DA RESOLUÇÃO DA IA -->
+            <div id="result-ia-container" class="hidden bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-wrap justify-between items-center pb-4 mb-6 border-b border-slate-200 gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                        <h3 class="font-bold text-slate-800 text-lg">Resolução Pronta para Entrega</h3>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="copiarResolucao()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-medium transition-colors flex items-center gap-1 border border-slate-300">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 002-2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            Copiar Texto
+                        </button>
+                        <button onclick="window.print()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-medium transition-colors flex items-center gap-1 border border-slate-300">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            Imprimir / Exportar PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ÁREA DE RENDERIZAÇÃO DA RESOLUÇÃO -->
+                <div id="ia-markdown-output" class="prose max-w-none text-slate-800"></div>
+            </div>
+        </div>
+
+        <!-- ABA 2: CONVERSOR DE BASES -->
+        <div id="tab-base" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-bold text-slate-800 mb-4">Conversor de Bases Numéricas (Com Parte Fracionária)</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Número a Converter:</label>
+                        <input type="text" id="base-num" value="13" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm code-font">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Base de Origem:</label>
+                        <select id="base-from" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm">
+                            <option value="10" selected>Decimal (Base 10)</option>
+                            <option value="2">Binário (Base 2)</option>
+                            <option value="8">Octal (Base 8)</option>
+                            <option value="16">Hexadecimal (Base 16)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Base de Destino:</label>
+                        <select id="base-to" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm">
+                            <option value="2" selected>Binário (Base 2)</option>
+                            <option value="10">Decimal (Base 10)</option>
+                            <option value="8">Octal (Base 8)</option>
+                            <option value="16">Hexadecimal (Base 16)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Dígitos Fracionários:</label>
+                        <input type="number" id="base-frac-digits" value="3" min="1" max="20" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm code-font">
+                    </div>
+                </div>
+                <button onclick="calcularBase()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-5 rounded-lg text-sm transition-colors">
+                    Calcular Conversão
+                </button>
+
+                <div id="base-result" class="hidden mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
+                    <p class="font-bold text-slate-800">Resultado: <span id="base-out-num" class="text-indigo-600 code-font"></span><sub id="base-out-base" class="text-indigo-600 font-bold"></sub></p>
+                    <div class="text-xs code-font text-slate-600 whitespace-pre-wrap bg-white p-3 rounded border border-slate-200" id="base-steps-int"></div>
+                    <div class="text-xs code-font text-slate-600 whitespace-pre-wrap bg-white p-3 rounded border border-slate-200" id="base-steps-frac"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 3: PONTO FLUTUANTE -->
+        <div id="tab-pf" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-bold text-slate-800 mb-4">Calculadora do Sistema $F(\beta, t, e_{min}, e_{max})$</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Base ($\beta$):</label>
+                        <input type="number" id="pf-beta" value="10" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Dígitos ($t$):</label>
+                        <input type="number" id="pf-t" value="4" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">$e_{min}$:</label>
+                        <input type="number" id="pf-min" value="-3" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">$e_{max}$:</label>
+                        <input type="number" id="pf-max" value="3" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm">
+                    </div>
+                </div>
+                <button onclick="calcularPF()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-5 rounded-lg text-sm transition-colors">
+                    Analisar Sistema
+                </button>
+
+                <div id="pf-result" class="hidden mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2 text-sm">
+                    <p><strong>Menor número positivo ($m$):</strong> <span id="pf-menor" class="code-font text-indigo-600"></span></p>
+                    <p><strong>Maior número positivo ($M$):</strong> <span id="pf-maior" class="code-font text-indigo-600"></span></p>
+                    <p><strong>Faixa de Underflow:</strong> <span id="pf-underflow" class="code-font text-red-600"></span></p>
+                    <p><strong>Faixa de Overflow:</strong> <span id="pf-overflow" class="code-font text-red-600"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 3.5: PONTO FIXO / MIL -->
+        <div id="tab-mil" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="mb-4">
+                    <h2 class="text-lg font-bold text-slate-800">Método Iterativo Linear (Ponto Fixo) & Teste de Convergência</h2>
+                    <p class="text-xs text-slate-500 mt-1">
+                        Teste se a função de iteração escolhida pelo professor $\phi(x)$ satisfaz $|\phi'(x)| < 1$ para garantir a convergência das iterações $x_{k+1} = \phi(x_k)$.
+                    </p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Função de Iteração $\phi(x)$:</label>
+                        <input type="text" id="mil-func" value="cos(x) / exp(x)" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm code-font" placeholder="Ex: (x^2 + 2)/3 ou cos(x)/exp(x)">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Ponto Inicial ($x_0$):</label>
+                        <input type="number" step="any" id="mil-x0" value="0.55" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm code-font">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Tolerância ($\epsilon$):</label>
+                        <input type="number" step="any" id="mil-tol" value="0.0001" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm code-font">
+                    </div>
+                </div>
+                <button onclick="calcularMIL()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-5 rounded-lg text-sm transition-colors">
+                    Testar $\phi'(x)$ e Executar Iterações
+                </button>
+
+                <div id="mil-result" class="hidden mt-6 space-y-4">
+                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                        <p class="text-sm font-bold text-slate-800">Derivada $\phi'(x)$: <span id="mil-derivada" class="code-font text-indigo-600"></span></p>
+                        <div>
+                            <span id="mil-convergence-badge"></span>
+                        </div>
+                    </div>
+                    <p class="font-bold text-slate-800 text-sm">Raiz Encontrada ($x^*$): <span id="mil-raiz" class="code-font text-emerald-600"></span></p>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-xs text-left">
+                            <thead class="bg-slate-100 font-semibold border-b">
+                                <tr>
+                                    <th class="p-2">k</th>
+                                    <th class="p-2">$x_k$</th>
+                                    <th class="p-2">$x_{k+1} = \phi(x_k)$</th>
+                                    <th class="p-2">$\phi'(x_k)$</th>
+                                    <th class="p-2">Erro $|x_{k+1} - x_k|$</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mil-table-body" class="code-font divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 4: NEWTON-RAPHSON -->
+        <div id="tab-newton" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-bold text-slate-800 mb-4">Calculadora do Método de Newton-Raphson</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Função $f(x)$:</label>
+                        <input type="text" id="nw-func" value="x^3 - 9*x + 3" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm code-font">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Aproximação Inicial ($x_0$):</label>
+                        <input type="number" step="any" id="nw-x0" value="0" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Tolerância ($\epsilon$):</label>
+                        <input type="number" step="any" id="nw-tol" value="0.0001" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm">
+                    </div>
+                </div>
+                <button onclick="calcularNewton()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-5 rounded-lg text-sm transition-colors">
+                    Executar Iterações
+                </button>
+
+                <div id="nw-result" class="hidden mt-6 space-y-4">
+                    <p class="font-bold text-slate-800">Derivada Encontrada: <span id="nw-derivada" class="code-font text-indigo-600"></span></p>
+                    <p class="font-bold text-slate-800">Raiz Aproximada: <span id="nw-raiz" class="code-font text-emerald-600"></span></p>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-xs text-left">
+                            <thead class="bg-slate-100 font-semibold border-b">
+                                <tr>
+                                    <th class="p-2">k</th>
+                                    <th class="p-2">$x_k$</th>
+                                    <th class="p-2">$f(x_k)$</th>
+                                    <th class="p-2">$f'(x_k)$</th>
+                                    <th class="p-2">Erro $|x_{k+1} - x_k|$</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nw-table-body" class="code-font divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- RODAPÉ -->
+    <footer class="bg-white border-t border-slate-200 mt-12 py-6 text-center text-xs text-slate-500">
+        <div class="max-w-6xl mx-auto px-4">
+            NuméricaSolver - Ferramenta Didática para Cálculo Numérico &copy; 2026
+        </div>
+    </footer>
+
+    <script>
+        let currentUploadedImageBase64 = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Captura de Cola (Ctrl + V) de Print de Tela
+            document.addEventListener('paste', handlePasteEvent);
+
+            // Drag and Drop de Imagens na Zona de Entrada
+            const dropZone = document.getElementById('drop-zone');
+            if (dropZone) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }, false);
+                });
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropZone.classList.add('drop-zone--over'), false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropZone.classList.remove('drop-zone--over'), false);
+                });
+
+                dropZone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files && files.length > 0 && files[0].type.startsWith('image/')) {
+                        processImageFile(files[0]);
+                    }
+                }, false);
+            }
+        });
+
+        function handlePasteEvent(e) {
+            const items = (e.clipboardData || e.originalEvent.clipboardData)?.items;
+            if (!items) return;
+
+            for (let item of items) {
+                if (item.type.indexOf('image') === 0) {
+                    const file = item.getAsFile();
+                    if (file) {
+                        processImageFile(file, "Print da Área de Transferência (Ctrl + V)");
+                        break;
+                    }
+                }
+            }
+        }
+
+        function processImageFile(file, customName = null) {
+            hideError();
+            document.getElementById('file-name-display').innerText = customName || file.name;
+            document.getElementById('btn-remove-image').classList.remove('hidden');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentUploadedImageBase64 = e.target.result;
+                document.getElementById('image-preview').src = e.target.result;
+                document.getElementById('image-preview-container').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- SISTEMA DE ABAS ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('text-indigo-600', 'bg-indigo-50', 'font-semibold');
+                btn.classList.add('text-slate-600', 'font-medium');
+            });
+
+            document.getElementById(tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById('btn-' + tabId);
+            activeBtn.classList.add('text-indigo-600', 'bg-indigo-50', 'font-semibold');
+            activeBtn.classList.remove('text-slate-600', 'font-medium');
+        }
+
+        function showError(msg) {
+            const errEl = document.getElementById('error-message');
+            errEl.innerText = msg;
+            errEl.classList.remove('hidden');
+            errEl.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function hideError() {
+            document.getElementById('error-message').classList.add('hidden');
+        }
+
+        function previewImage(input) {
+            hideError();
+            if (input.files && input.files[0]) {
+                processImageFile(input.files[0]);
+            }
+        }
+
+        function removeImage() {
+            currentUploadedImageBase64 = null;
+            document.getElementById('image-input').value = '';
+            document.getElementById('file-name-display').innerText = 'Nenhum print ou imagem selecionado';
+            document.getElementById('btn-remove-image').classList.add('hidden');
+            document.getElementById('image-preview-container').classList.add('hidden');
+            document.getElementById('image-preview').src = '';
+        }
+
+        function loadPreset(id) {
+            const promptInput = document.getElementById('prompt-input');
+            removeImage();
+
+            if (id === 1) {
+                promptInput.value = "Dada a função f(x) = x^3 - 9x + 3 no intervalo [-3.16, -3.15] com precisão epsilon = 10^-3, encontre a raiz. Apresente obrigatoriamente: 1) Prova da continuidade por limites; 2) Teorema de Bolzano para existência; 3) Teste da derivada para unicidade da raiz no intervalo; 4) Cálculo das iterações pelo Método da Bissecção com alta precisão e erro e.";
+            } else if (id === 2) {
+                promptInput.value = "Para a equação quadrática x^2 - 100.22x + 1.2371 = 0 usando 5 dígitos significativos e truncamento: a) Calcule x1 e x2 pela fórmula tradicional; b) Observe a perda de precisão em x2 devido ao cancelamento subtrativo e recalcule x2 usando a relação das raízes x1 * x2 = c/a; c) Calcule o erro absoluto eA entre os dois valores obtidos para x2.";
+            } else if (id === 3) {
+                promptInput.value = "Dada a função f(x) = cos(x) - x*e^x no intervalo [0.5, 0.6] com tol = 10^-4: a) Prove a continuidade por limites; b) Prove a existência de raiz por Bolzano; c) Prove a unicidade por derivada; d) Defina a função de iteração phi(x) = cos(x)/e^x e prove a convergência demonstrando que |phi'(x0)| < 1 para x0 = 0.55; e) Execute as iterações do Método Iterativo Linear (MIL).";
+            } else if (id === 4) {
+                promptInput.value = "Dada a função f(x) = x - cos(x) no intervalo [0, 1] com tol = 10^-5: a) Prova de continuidade por limites; b) Prova de existência por Bolzano; c) Prova de unicidade por derivada; d) Aplicação do Método de Newton-Raphson com x0 = 0.5, detalhando x0, x1, x2, x3, derivada f'(x) e erro e.";
+            } else if (id === 5) {
+                promptInput.value = "Para o sistema de ponto flutuante F(2, 10, -15, 15): a) Encontre o menor número positivo m representável; b) Encontre o próximo número representável após m; c) Explique por que a representação em máquina é discreta; d) Determine os limites de Underflow e Overflow.";
+            }
+        }
+
+        function renderMarkdownWithMath(markdownText) {
+            if (!markdownText) return '';
+            
+            const mathBlocks = [];
+            
+            let protectedText = markdownText.replace(/\$\$([\s\S]*?)\$\$/g, (match) => {
+                const token = `XDISPLAYMATHX${mathBlocks.length}X`;
+                mathBlocks.push({ token, code: match });
+                return token;
+            });
+            
+            protectedText = protectedText.replace(/\$([^\$\n]+?)\$/g, (match) => {
+                const token = `XINLINEMATHX${mathBlocks.length}X`;
+                mathBlocks.push({ token, code: match });
+                return token;
+            });
+            
+            let html = marked.parse(protectedText);
+            
+            mathBlocks.forEach(item => {
+                html = html.replace(item.token, item.code);
+            });
+            
+            return html;
+        }
+
+        async function resolverQuestaoIA() {
+            hideError();
+            const userPrompt = document.getElementById('prompt-input').value.trim();
+            const modoPrecisao = document.getElementById('ia-precision-mode')?.value || 'arredondamento';
+            const casasDecimais = document.getElementById('ia-decimals')?.value || '18';
+
+            if (!userPrompt && !currentUploadedImageBase64) {
+                showError("Por favor, digite o enunciado da questão ou anexe uma imagem com a questão.");
+                return;
+            }
+
+            const loadingEl = document.getElementById('loading-ia');
+            const resultContainer = document.getElementById('result-ia-container');
+            const outputEl = document.getElementById('ia-markdown-output');
+            const btnSolve = document.getElementById('btn-solve-ia');
+
+            loadingEl.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+            btnSolve.disabled = true;
+            btnSolve.classList.add('opacity-50');
+
+            const systemPrompt = `Você é um estudante de excelência em Cálculo Numérico resolvendo uma prova acadêmica rigorosa para entrega ao professor, seguindo estritamente a metodologia e estrutura das notações de aula fornecidas.
+
+REGRAS RÍGIDAS DE PADRONIZAÇÃO NUMÉRICA E SEQUÊNCIA LÓGICA:
+
+1. POLÍTICA DE OPERAÇÃO NUMÉRICA OBRIGATÓRIA (SEJA TRUNCAMENTO OU ARREDONDAMENTO):
+   - Toda a resolução deve utilizar EXCLUSIVAMENTE o modo de **${modoPrecisao.toUpperCase()}** em TODAS as etapas intermediárias, substituições de valores e resultados finais.
+   - O limite fixo de precisão adotado é de **${casasDecimais} casas decimais (até 18 dígitos)**.
+   - ${modoPrecisao === 'truncamento' 
+        ? `É ESTRITAMENTE PROIBIDO fazer qualquer arredondamento! Em TODA substituição e cálculo intermediário, aplique TRUNCAMENTO ESTRITO (corte simples) na ${casasDecimais}ª casa decimal sem alterar ou arredondar os dígitos anteriores.` 
+        : `Aplique ARREDONDAMENTO PADRÃO para ${casasDecimais} casas decimais uniformemente em TODA a questão (tanto nas contas intermediárias quanto nos resultados finais).`}
+   - No topo da resposta, inclua obrigatoriamente um bloco de declaração explicativa em destaque:
+     > **Declaração de Política Numérica**: Esta resolução adota rigorosamente **${modoPrecisao.toUpperCase()}** para **${casasDecimais} casas decimais (18 dígitos máximos)** em absolutamente todas as etapas, tabelas e substituições numéricas intermediárias e finais.
+
+2. ESTRUTURA LÓGICA PADRONIZADA (NUNCA OMITA ETAPAS):
+   - NUNCA inclua saudações, conversa informal ou frases de cortesia (Ex: NUNCA diga "Olá", "Aqui está", "Claro").
+   - Identifique a questão (Ex: "# Resolução - Questão 1").
+   - Para ZEROS DE FUNÇÕES (Bissecção, Ponto Fixo/MIL, Newton-Raphson, Secante), siga impreterivelmente a sequência em 4 passos:
+     * **PASSO 1: Prova de Continuidade por Limites**: Demonstrar que a função é contínua no intervalo $[a,b]$ calculando o limite para qualquer $c \\in [a,b]$: $\\lim_{x \\to c} f(x) = f(c)$. Conclua: "Logo, a função é contínua em todo o intervalo."
+     * **PASSO 2: Teorema de Bolzano (Existência da Raiz)**: Calcular $f(a)$ e $f(b)$ usando a política de ${modoPrecisao} definida, mostrando explicitamente $f(a) \\cdot f(b) < 0$, e concluir: "Como $f(a)f(b) < 0$, pelo Teorema de Bolzano, há pelo menos uma raiz no intervalo $[a,b]$."
+     * **PASSO 3: Teste da Derivada (Unicidade da Raiz)**: Derivar $f'(x)$, avaliar o sinal no intervalo e demonstrar monotonicidade estrita. Concluir: "Como a derivada mantém o mesmo sinal em todo o intervalo, a raiz é ÚNICA."
+     * **PASSO 4: Resolução pelo Método Numérico**:
+       - Apresentar as fórmulas completas e todas as substituições numéricas detalhadas aplicando a regra de **${modoPrecisao.toUpperCase()} em ${casasDecimais} casas decimais** para cada termo.
+       - Indicar o erro real $e$ explicitamente em notação $e = \\dots \\times 10^{-k}$ ou em formato decimal truncado/arredondado conforme configurado.
+
+3. PARA SISTEMAS DE NUMERAÇÃO / CONVERSÃO DE BASES / PONTO FLUTUANTE / ERROS:
+   - Mantenha rigorosamente a mesma política de ${modoPrecisao} em ${casasDecimais} casas decimais para todas as divisões/multiplicações fracionárias ou representações de máquina.
+
+4. PRECISÃO NUMÉRICA E FORMATO LATEX:
+   - Exiba todos os números respeitando o limite de até 18 dígitos (${casasDecimais} casas decimais).
+   - Toda notação matemática DEVE utilizar LaTeX de forma limpa: inline $f(x)$ ou blocos centrais $$\\dots$$.`;
+
+            try {
+                const responseText = await callGeminiAPI(userPrompt, currentUploadedImageBase64, systemPrompt);
+                outputEl.innerHTML = renderMarkdownWithMath(responseText);
+
+                if (window.MathJax && MathJax.typesetPromise) {
+                    MathJax.typesetPromise([outputEl]).catch(err => console.log('Erro MathJax:', err));
+                }
+
+                resultContainer.classList.remove('hidden');
+                resultContainer.scrollIntoView({ behavior: 'smooth' });
+
+            } catch (err) {
+                showError("Ocorreu um erro ao gerar a resolução com a IA: " + err.message);
+            } finally {
+                loadingEl.classList.add('hidden');
+                btnSolve.disabled = false;
+                btnSolve.classList.remove('opacity-50');
+            }
+        }
+
+        async function callGeminiAPI(promptText, base64Image, systemInstructionText) {
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const parts = [];
+            if (promptText) {
+                parts.push({ text: promptText });
+            }
+            if (base64Image) {
+                const rawBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+                const mimeMatch = base64Image.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+                const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
+                parts.push({
+                    inlineData: {
+                        mimeType: mimeType,
+                        data: rawBase64
+                    }
+                });
+            }
+
+            const payload = {
+                contents: [{ role: "user", parts: parts }]
+            };
+
+            if (systemInstructionText) {
+                payload.systemInstruction = {
+                    parts: [{ text: systemInstructionText }]
+                };
+            }
+
+            let response;
+            let delay = 1000;
+            const maxRetries = 3;
+
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) break;
+                } catch (err) {
+                    if (attempt === maxRetries) throw err;
+                }
+
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+
+            if (!response || !response.ok) {
+                let errorMsg = `Erro na comunicação com a IA (${response ? response.status : 'Sem conexão'}).`;
+                try {
+                    const errJson = await response.json();
+                    if (errJson.error && errJson.error.message) {
+                        errorMsg = errJson.error.message;
+                    }
+                } catch (e) {}
+                throw new Error(errorMsg);
+            }
+
+            const result = await response.json();
+            const candidate = result.candidates?.[0];
+            const textOutput = candidate?.content?.parts?.[0]?.text;
+
+            if (!textOutput) {
+                throw new Error("Não foi possível gerar a resposta. Verifique a entrada e tente novamente.");
+            }
+
+            return textOutput;
+        }
+
+        function copiarResolucao() {
+            const outputEl = document.getElementById('ia-markdown-output');
+            if (!outputEl) return;
+            const text = outputEl.innerText;
+            
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.error("Erro ao copiar: ", err);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function calcularBase() {
+            hideError();
+            const numStr = document.getElementById('base-num').value.trim().toUpperCase();
+            const fromBase = parseInt(document.getElementById('base-from').value);
+            const toBase = parseInt(document.getElementById('base-to').value);
+            const fracDigits = parseInt(document.getElementById('base-frac-digits').value) || 3;
+
+            if (!numStr) { showError("Informe o número para conversão."); return; }
+
+            try {
+                const parts = numStr.split('.');
+                const intPartStr = parts[0] || "0";
+                const fracPartStr = parts.length > 1 ? parts[1] : '';
+
+                // Validação de caracteres válidos
+                const validChars = "0123456789ABCDEF".slice(0, fromBase);
+                for (let char of (intPartStr + fracPartStr)) {
+                    if (!validChars.includes(char)) {
+                        showError(`O caractere '${char}' não é válido para a Base ${fromBase}.`);
+                        return;
+                    }
+                }
+
+                let stepsInt = "";
+                let stepsFrac = "";
+
+                // --- PARTE INTEIRA ---
+                let intBase10 = 0;
+
+                // 1. Expansão Polinomial (Base Origem -> Base 10) do maior expoente ao menor
+                if (fromBase !== 10) {
+                    stepsInt += `1) Expansão Polinomial (Base ${fromBase} → Base 10):\n`;
+                    let terms = [];
+                    let evalTerms = [];
+                    const len = intPartStr.length;
+
+                    for (let i = 0; i < len; i++) {
+                        const char = intPartStr[i];
+                        const digitVal = parseInt(char, fromBase);
+                        const exp = len - 1 - i;
+                        intBase10 += digitVal * Math.pow(fromBase, exp);
+                        terms.push(`${char} × ${fromBase}^${exp}`);
+                        evalTerms.push(digitVal * Math.pow(fromBase, exp));
+                    }
+                    stepsInt += `   (${intPartStr})_${fromBase} = ${terms.join(' + ')}\n`;
+                    stepsInt += `   (${intPartStr})_${fromBase} = ${evalTerms.join(' + ')} = (${intBase10})_10\n\n`;
+                } else {
+                    intBase10 = parseInt(intPartStr, 10);
+                }
+
+                // 2. Divisões Sucessivas no formato N = Base x Q + R, ak = R
+                let resultIntDigits = [];
+                if (toBase !== 10 || fromBase === 10) {
+                    stepsInt += `${fromBase !== 10 ? '2) ' : ''}Divisões Sucessivas (Base 10 → Base ${toBase}):\n`;
+                    let curr = intBase10;
+                    let k = 0;
+
+                    if (curr === 0) {
+                        stepsInt += `   0 = ${toBase} × 0 + 0, a0 = 0\n`;
+                        resultIntDigits.push("0");
+                    } else {
+                        while (curr > 0) {
+                            let q = Math.floor(curr / toBase);
+                            let r = curr % toBase;
+                            let rChar = r.toString(toBase).toUpperCase();
+                            stepsInt += `   ${curr} = ${toBase} × ${q} + ${r}, a${k} = ${rChar}\n`;
+                            resultIntDigits.unshift(rChar);
+                            curr = q;
+                            k++;
+                        }
+                    }
+                } else {
+                    resultIntDigits = [intBase10.toString(10)];
+                }
+
+                let resultIntStr = resultIntDigits.join('');
+
+                // --- PARTE FRACIONÁRIA ---
+                let fracBase10 = 0;
+                let resultFracStr = "";
+
+                if (fracPartStr.length > 0 || (fromBase === 10 && parseFloat("0." + (fracPartStr || "0")) > 0)) {
+                    if (fromBase !== 10 && fracPartStr.length > 0) {
+                        stepsFrac += `1) Expansão Polinomial Fracionária (Base ${fromBase} → Base 10):\n`;
+                        let fracTerms = [];
+                        let evalFracTerms = [];
+                        for (let i = 0; i < fracPartStr.length; i++) {
+                            const char = fracPartStr[i];
+                            const digitVal = parseInt(char, fromBase);
+                            const exp = -(i + 1);
+                            fracBase10 += digitVal * Math.pow(fromBase, exp);
+                            fracTerms.push(`${char} × ${fromBase}^(${exp})`);
+                            evalFracTerms.push((digitVal * Math.pow(fromBase, exp)).toFixed(6));
+                        }
+                        stepsFrac += `   0.${fracPartStr}_${fromBase} = ${fracTerms.join(' + ')}\n`;
+                        stepsFrac += `   0.${fracPartStr}_${fromBase} = ${evalFracTerms.join(' + ')} = (${fracBase10})_10\n\n`;
+                    } else if (fromBase === 10 && fracPartStr.length > 0) {
+                        fracBase10 = parseFloat("0." + fracPartStr);
+                    }
+
+                    if (fracBase10 > 0 || fracPartStr.length > 0) {
+                        stepsFrac += `${fromBase !== 10 ? '2) ' : ''}Multiplicações Sucessivas (Base 10 → Base ${toBase}):\n`;
+                        let currFrac = fracBase10;
+                        let fracDigitsList = [];
+
+                        for (let j = 1; j <= fracDigits; j++) {
+                            let prod = currFrac * toBase;
+                            let intPart = Math.floor(prod);
+                            let remFrac = prod - intPart;
+                            let bChar = intPart.toString(toBase).toUpperCase();
+
+                            stepsFrac += `   ${currFrac.toFixed(4)} × ${toBase} = ${prod.toFixed(4)} → b${j} = ${bChar} (resto: ${remFrac.toFixed(4)})\n`;
+                            fracDigitsList.push(bChar);
+                            currFrac = remFrac;
+                        }
+                        resultFracStr = "." + fracDigitsList.join('');
+                    }
+                }
+
+                const finalRes = `(${resultIntStr}${resultFracStr})`;
+                document.getElementById('base-out-num').innerText = finalRes;
+                document.getElementById('base-out-base').innerText = `${toBase}`;
+                document.getElementById('base-steps-int').innerText = stepsInt;
+                document.getElementById('base-steps-frac').innerText = stepsFrac || "Sem parte fracionária.";
+                document.getElementById('base-result').classList.remove('hidden');
+
+            } catch (err) {
+                showError("Erro na conversão de bases: " + err.message);
+            }
+        }
+
+        function calcularPF() {
+            hideError();
+            try {
+                const beta = parseInt(document.getElementById('pf-beta').value);
+                const t = parseInt(document.getElementById('pf-t').value);
+                const emin = parseInt(document.getElementById('pf-min').value);
+                const emax = parseInt(document.getElementById('pf-max').value);
+
+                const m = Math.pow(beta, emin - 1);
+                const M = (1 - Math.pow(beta, -t)) * Math.pow(beta, emax);
+
+                document.getElementById('pf-menor').innerText = `m = ${m.toExponential(6)} (${m})`;
+                document.getElementById('pf-maior').innerText = `M = ${M.toExponential(6)} (${M})`;
+                document.getElementById('pf-underflow').innerText = `0 < |x| < m (${m.toExponential(6)})`;
+                document.getElementById('pf-overflow').innerText = `|x| > M (${M.toExponential(6)})`;
+                document.getElementById('pf-result').classList.remove('hidden');
+            } catch (err) {
+                showError("Erro no cálculo do sistema de ponto flutuante: " + err.message);
+            }
+        }
+
+        function calcularMIL() {
+            hideError();
+            try {
+                const phiStr = document.getElementById('mil-func').value.trim();
+                let x0 = parseFloat(document.getElementById('mil-x0').value);
+                const tol = parseFloat(document.getElementById('mil-tol').value);
+
+                if (!phiStr) {
+                    showError("Informe a função de iteração phi(x).");
+                    return;
+                }
+
+                const expr = math.parse(phiStr);
+                const derivedExpr = math.derivative(expr, 'x');
+                const phi = (xVal) => expr.evaluate({ x: xVal });
+                const phiPrime = (xVal) => derivedExpr.evaluate({ x: xVal });
+
+                const phiPrimeX0 = Math.abs(phiPrime(x0));
+                const converges = phiPrimeX0 < 1;
+
+                document.getElementById('mil-derivada').innerText = derivedExpr.toString();
+                
+                const badgeEl = document.getElementById('mil-convergence-badge');
+                if (converges) {
+                    badgeEl.className = "inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300";
+                    badgeEl.innerHTML = `✅ |ϕ'(${x0})| = ${phiPrimeX0.toFixed(6)} < 1 — Convergência Garantida!`;
+                } else {
+                    badgeEl.className = "inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300";
+                    badgeEl.innerHTML = `⚠️ |ϕ'(${x0})| = ${phiPrimeX0.toFixed(6)} ≥ 1 — Atenção: Pode não convergir!`;
+                }
+
+                const tableBody = document.getElementById('mil-table-body');
+                tableBody.innerHTML = '';
+
+                let xCurr = x0;
+                let k = 0;
+                let errorVal = Infinity;
+                const maxIter = 50;
+
+                while (errorVal > tol && k < maxIter) {
+                    const xNext = phi(xCurr);
+                    errorVal = Math.abs(xNext - xCurr);
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="p-2 border-b">${k}</td>
+                        <td class="p-2 border-b">${xCurr.toFixed(8)}</td>
+                        <td class="p-2 border-b">${xNext.toFixed(8)}</td>
+                        <td class="p-2 border-b">${phiPrime(xCurr).toFixed(6)}</td>
+                        <td class="p-2 border-b">${errorVal.toExponential(4)}</td>
+                    `;
+                    tableBody.appendChild(tr);
+
+                    xCurr = xNext;
+                    k++;
+                }
+
+                document.getElementById('mil-raiz').innerText = xCurr.toFixed(8);
+                document.getElementById('mil-result').classList.remove('hidden');
+            } catch (err) {
+                showError("Erro ao executar Ponto Fixo (MIL): " + err.message);
+            }
+        }
+
+        function calcularNewton() {
+            hideError();
+            try {
+                const exprStr = document.getElementById('nw-func').value.trim();
+                let x0 = parseFloat(document.getElementById('nw-x0').value);
+                const tol = parseFloat(document.getElementById('nw-tol').value);
+
+                const expr = math.parse(exprStr);
+                const derivedExpr = math.derivative(expr, 'x');
+                const f = (xVal) => expr.evaluate({ x: xVal });
+                const fPrime = (xVal) => derivedExpr.evaluate({ x: xVal });
+
+                document.getElementById('nw-derivada').innerText = derivedExpr.toString();
+
+                const tableBody = document.getElementById('nw-table-body');
+                tableBody.innerHTML = '';
+
+                let xCurr = x0;
+                let k = 0;
+                let errorVal = Infinity;
+                const maxIter = 50;
+
+                while (errorVal > tol && k < maxIter) {
+                    const fx = f(xCurr);
+                    const fpx = fPrime(xCurr);
+
+                    if (Math.abs(fpx) < 1e-12) {
+                        showError("Derivada próxima de zero na iteração " + k + ". O método não pode prosseguir.");
+                        return;
+                    }
+
+                    const xNext = xCurr - (fx / fpx);
+                    errorVal = Math.abs(xNext - xCurr);
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="p-2 border-b">${k}</td>
+                        <td class="p-2 border-b">${xCurr.toFixed(8)}</td>
+                        <td class="p-2 border-b">${fx.toExponential(4)}</td>
+                        <td class="p-2 border-b">${fpx.toFixed(6)}</td>
+                        <td class="p-2 border-b">${errorVal.toExponential(4)}</td>
+                    `;
+                    tableBody.appendChild(tr);
+
+                    xCurr = xNext;
+                    k++;
+                }
+
+                document.getElementById('nw-raiz').innerText = xCurr.toFixed(8);
+                document.getElementById('nw-result').classList.remove('hidden');
+            } catch (err) {
+                showError("Erro ao executar Newton-Raphson: " + err.message);
+            }
+        }
+    </script>
+</body>
+</html>
